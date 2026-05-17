@@ -9,9 +9,10 @@ vocab = joblib.load("../models/vocab.pkl")
 def tokenize(text):
     return text.lower().split()
 
-# Encode text
-max_len = 100
+# Max sequence length
+max_len = 200
 
+# Encode text
 def encode(text):
 
     tokens = tokenize(text)
@@ -21,8 +22,10 @@ def encode(text):
         for word in tokens
     ]
 
+    # Truncate
     encoded = encoded[:max_len]
 
+    # Padding
     encoded += [0] * (max_len - len(encoded))
 
     return encoded
@@ -34,13 +37,21 @@ class FakeNewsClassifier(nn.Module):
 
         super().__init__()
 
+        # Embedding layer
         self.embedding = nn.Embedding(vocab_size, embed_dim)
 
-        self.fc1 = nn.Linear(embed_dim, 128)
+        # Fully connected layers
+        self.fc1 = nn.Linear(embed_dim, 256)
 
-        self.relu = nn.ReLU()
+        self.relu1 = nn.ReLU()
 
-        self.fc2 = nn.Linear(128, 1)
+        self.dropout = nn.Dropout(0.3)
+
+        self.fc2 = nn.Linear(256, 128)
+
+        self.relu2 = nn.ReLU()
+
+        self.fc3 = nn.Linear(128, 1)
 
         self.sigmoid = nn.Sigmoid()
 
@@ -52,18 +63,25 @@ class FakeNewsClassifier(nn.Module):
 
         x = self.fc1(embedded)
 
-        x = self.relu(x)
+        x = self.relu1(x)
+
+        x = self.dropout(x)
 
         x = self.fc2(x)
 
+        x = self.relu2(x)
+
+        x = self.fc3(x)
+
         return self.sigmoid(x)
 
-# Load model
+# Model setup
 vocab_size = len(vocab) + 1
-embed_dim = 64
+embed_dim = 128
 
 model = FakeNewsClassifier(vocab_size, embed_dim)
 
+# Load trained weights
 model.load_state_dict(
     torch.load("../models/fake_news_dl_model.pt")
 )
@@ -88,10 +106,15 @@ with torch.no_grad():
 
     confidence = output.item()
 
-# Result
+# Output result
 if confidence >= 0.5:
-    print(f"\n✅ REAL NEWS")
+
+    print("\n✅ REAL NEWS")
+
     print(f"Confidence Score: {confidence * 100:.2f}%")
+
 else:
-    print(f"\n🚨 FAKE NEWS DETECTED")
+
+    print("\n🚨 FAKE NEWS DETECTED")
+
     print(f"Confidence Score: {(1 - confidence) * 100:.2f}%")
